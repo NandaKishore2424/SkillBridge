@@ -30,22 +30,31 @@
 
 #### 1.2 Database Migration
 ```bash
-# Run the database migration script
-psql <database_url> -f skillbridge_backup.sql
+# Run the database migration script against the shared pooler
+psql "postgresql://postgres.xuqcieuvmxgyjdvomakr:24SkillBridge%40@aws-1-ap-south-1.pooler.supabase.com:5432/postgres" \
+  -f skillbridge_backup.sql
 ```
 
 ### 2. Backend Deployment
 
 #### 2.1 Environment Variables
-Create a `.env` file:
+Create a `.env` file (or reuse the provided `supabase.env.example`), replacing placeholders with the real credentials. **Never commit files containing live passwords or secrets**:
 ```env
-# Database Configuration
-SUPABASE_URL=your_supabase_url
-SUPABASE_USER=your_supabase_user
-SUPABASE_PASSWORD=your_supabase_password
+# Database Configuration (Supabase Shared Pooler)
+SUPABASE_DB_HOST=aws-1-ap-south-1.pooler.supabase.com
+SUPABASE_DB_PORT=5432
+SUPABASE_DB_NAME=postgres
+SUPABASE_DB_USER=postgres.xuqcieuvmxgyjdvomakr
+SUPABASE_DB_PASSWORD=24SkillBridge@
+SUPABASE_DB_SSLMODE=require
+SUPABASE_JDBC_URL=jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+# Optional tuning
+SUPABASE_DB_POOL_SIZE=10
+SUPABASE_DB_MIN_IDLE=5
 
 # JWT Configuration
-JWT_SECRET=your_jwt_secret
+JWT_SECRET=your_generated_32_byte_secret
 JWT_EXPIRATION=86400000
 
 # Server Configuration
@@ -65,11 +74,22 @@ cd SkillBridge
 # Run tests
 ./gradlew test
 
-# Start application
+# Start application (ensure environment variables are exported)
+export $(grep -v '^#' .env | xargs)
 java -jar build/libs/skillbridge-0.0.1-SNAPSHOT.jar
+
+# For local development, prefer storing secrets in a git-ignored file such as .env.supabase
 ```
 
-#### 2.3 Using Docker
+#### 2.3 Automate schema bootstrap (Supabase)
+```bash
+export $(grep -v '^#' .env | xargs)
+./scripts/bootstrap_supabase_schema.sh
+```
+
+The script starts the backend in headless mode (`SPRING_MAIN_WEB_APPLICATION_TYPE=none`) with Hibernate `ddl-auto=update`, creates any missing tables (including the new `users` table), runs seed data, and exits automatically.
+
+#### 2.4 Using Docker
 ```bash
 # Build Docker image
 docker build -t skillbridge-backend .
@@ -85,10 +105,9 @@ docker run -d \
 ### 3. Frontend Deployment
 
 #### 3.1 Environment Setup
-Create a `.env` file in the frontend directory:
+Create a git-ignored `.env.local` file in the `frontend` directory and point it to the deployed backend API:
 ```env
-REACT_APP_API_URL=http://your-backend-url:8080
-REACT_APP_ENV=production
+REACT_APP_API_URL=https://your-backend-domain/api/v1
 ```
 
 #### 3.2 Build Process
@@ -102,7 +121,7 @@ npm install
 # Build for production
 npm run build
 
-# Start production server
+# Start production server (optional CRA preview)
 npm start
 ```
 
@@ -115,7 +134,7 @@ docker build -t skillbridge-frontend .
 docker run -d \
   --name skillbridge-frontend \
   -p 3000:3000 \
-  --env-file .env \
+  --env-file .env.local \
   skillbridge-frontend
 ```
 

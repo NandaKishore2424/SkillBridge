@@ -2,6 +2,7 @@ package com.college.skillbridge.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,7 +18,8 @@ public class JwtTokenProvider {
     private final SecretKey secretKey;
     private final long validityInMilliseconds;
 
-    public JwtTokenProvider(SecretKey secretKey, long validityInMilliseconds) {
+    public JwtTokenProvider(SecretKey secretKey,
+                            @Value("${jwt.expiration:86400000}") long validityInMilliseconds) {
         this.secretKey = secretKey;
         this.validityInMilliseconds = validityInMilliseconds;
     }

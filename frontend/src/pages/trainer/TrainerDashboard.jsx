@@ -8,7 +8,6 @@ const TrainerDashboard = () => {
   const [assignedBatches, setAssignedBatches] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const user = AuthService.getCurrentUser();
 
   useEffect(() => {
     // In a real app, fetch this data from your API

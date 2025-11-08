@@ -107,7 +107,31 @@ How the frontend calls the API
 
 ## How to run locally (development)
 
-Backend (from repo root):
+### 1. Configure Supabase environment
+
+Create a copy of `supabase.env.example` and populate it with the credentials from your Supabase project (shared pooler recommended when connecting from IPv4 networks):
+
+```bash
+cp supabase.env.example .env.supabase
+```
+
+Update the new file with the real password from the Supabase connection string. The sample URL included in the example file expands to:
+
+```
+jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+> **Note:** The generated user looks like `postgres.xuqcieuvmxgyjdvomakr` and the password may contain `@`. When exporting a connection URI ensure the password portion is percent-encoded if necessary (e.g. `24SkillBridge%40`).
+
+Export the environment variables before starting the application:
+
+```bash
+export $(grep -v '^#' .env.supabase | xargs)
+```
+
+> Keep `.env.supabase` out of source control and rotate the password and JWT secret if they were ever shared publicly.
+
+### 2. Start the backend (from repo root)
 
 ```bash
 # start the Spring Boot backend
@@ -119,8 +143,22 @@ java -jar build/libs/skillbridge-0.0.1-SNAPSHOT.jar
 ```
 
 Notes:
-- Ensure you have a Postgres database running and update `src/main/resources/application.properties` or `application.yml` with the correct `spring.datasource.*` properties. The repository currently includes `runtimeOnly 'org.postgresql:postgresql'` in `build.gradle` and the seeder expects JPA repositories.
-- For quick local development you can change datasource to an in-memory H2 profile or provide a test H2 configuration.
+- The Spring configuration now reads Supabase-specific variables (`SUPABASE_JDBC_URL`, `SUPABASE_DB_USER`, `SUPABASE_DB_PASSWORD`, etc.). Defaults still fall back to `localhost` for standalone development.
+- Ensure the Supabase project has the expected schema (run `psql -f skillbridge_backup.sql` against the pooler connection if starting from scratch).
+- For quick local development with an ephemeral database you can override `SUPABASE_JDBC_URL` to point at a local Postgres instance or H2 profile.
+
+### 3. Validate connectivity
+
+```bash
+# 3a. Check that the credentials work
+psql "postgresql://${SUPABASE_DB_USER}:${SUPABASE_DB_PASSWORD}@${SUPABASE_DB_HOST}:${SUPABASE_DB_PORT}/${SUPABASE_DB_NAME}?sslmode=require" -c '\dt'
+
+# 3b. Run the application smoke test suite
+./gradlew test
+
+# 3c. Hit the health endpoint once the app is running
+curl -H "Authorization: Bearer <jwt>" http://localhost:8080/api/test
+```
 
 Frontend (from `frontend/`):
 
@@ -130,7 +168,24 @@ npm install
 npm start
 ```
 
-The React dev server will be available at `http://localhost:3000`. The frontend expects the backend at `http://localhost:8080/api/v1` by default (see `frontend/src/services/apiService.js`).
+The React dev server will be available at `http://localhost:3000`. Override the backend URL by creating `frontend/.env.local` with:
+
+```
+REACT_APP_API_URL=http://localhost:8080/api/v1
+```
+
+The runtime will fall back to `http://localhost:8080/api/v1` if the environment variable is not defined (see `frontend/src/services/apiService.js`).
+
+### 4. Automate Supabase schema & seed
+
+When you need to prime a fresh Supabase database, point the environment variables at your project and run:
+
+```bash
+export $(grep -v '^#' .env.supabase | xargs)
+./scripts/bootstrap_supabase_schema.sh
+```
+
+This launches the backend in headless mode with Hibernate schema update enabled. All tables are created, the `users` table is populated with seed accounts, and the process exits automatically once initialization completes.
 
 ## Tests
 

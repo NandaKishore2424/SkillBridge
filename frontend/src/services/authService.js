@@ -87,48 +87,9 @@ const AuthService = {
     } catch (error) {
       console.error("Login error:", error);
       
-      // TEMPORARY MOCK AUTH - for testing when backend is not available
-      if (email === 'admin@skillbridge.com' && password === 'admin123') {
-        const mockUser = {
-          id: '1',
-          email: email,
-          name: 'Admin User',
-          role: 'ADMIN'
-        };
-        
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        localStorage.setItem('token', 'mock-token');
-        return { success: true, user: mockUser };
-      }
-
-      if (email === 'student@test.com' && password === 'password') {
-        const mockUser = {
-          id: '2',
-          email: email,
-          name: 'Student User',
-          role: 'STUDENT'
-        };
-        
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        localStorage.setItem('token', 'mock-token');
-        return { success: true, user: mockUser };
-      }
-
-      if (email === 'john.smith@example.com' && password === 'password') {
-        const mockUser = {
-          id: '3',
-          email: email,
-          name: 'John Smith',
-          role: 'TRAINER'
-        };
-        
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        localStorage.setItem('token', 'mock-token');
-        return { success: true, user: mockUser };
-      }
-      
-      const message = error.response?.data?.message || 
-                    'Unable to connect to server. Please try again later.';
+      const message =
+        error.response?.data?.message ||
+        'Unable to authenticate. Please verify your credentials or try again later.';
       return { success: false, message };
     }
   },

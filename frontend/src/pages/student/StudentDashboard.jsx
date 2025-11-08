@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaLaptopCode, FaCode, FaUserGraduate, FaBuilding, FaCalendarAlt } from 'react-icons/fa';
+import { FaCode, FaUserGraduate, FaCalendarAlt } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import AuthService from '../../services/authService';
 import axios from 'axios';
@@ -10,7 +10,6 @@ const StudentDashboard = () => {
   const [skills, setSkills] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [recommendedBatches, setRecommendedBatches] = useState([]);
-  const user = AuthService.getCurrentUser();
 
   useEffect(() => {
     
@@ -46,8 +45,11 @@ const StudentDashboard = () => {
     // Fetch recommended batches
     const fetchRecommendations = async () => {
       try {
-        const user = AuthService.getCurrentUser();
-        const response = await axios.get(`/api/v1/students/${user.id}/recommend-batches`);
+        const currentUser = AuthService.getCurrentUser();
+        if (!currentUser) {
+          return;
+        }
+        const response = await axios.get(`/api/v1/students/${currentUser.id}/recommend-batches`);
         setRecommendedBatches(response.data);
       } catch (error) {
         console.error("Failed to fetch batch recommendations", error);

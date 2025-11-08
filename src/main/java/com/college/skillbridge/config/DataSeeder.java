@@ -1,7 +1,7 @@
 package com.college.skillbridge.config;
 
 import com.college.skillbridge.enums.HiringType;
-import com.college.skillbridge.enums.SkillLevel;
+import com.college.skillbridge.enums.Role;
 import com.college.skillbridge.models.*;
 import com.college.skillbridge.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +9,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.Arrays;
 
 @Component
@@ -36,6 +35,9 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private AdminRepository adminRepository;
     
+    @Autowired
+    private UserRepository userRepository;
+
     // Will be configured in security config
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -72,6 +74,7 @@ public class DataSeeder implements CommandLineRunner {
         trainer1.setSpecialization("Full Stack Development");
         trainer1.setBio("10+ years of experience in industry and education");
         trainerRepository.save(trainer1);
+        createUserIfAbsent(trainer1.getName(), trainer1.getEmail(), "password", Role.TRAINER);
         
         Trainer trainer2 = new Trainer();
         trainer2.setName("Emily Johnson");
@@ -80,6 +83,7 @@ public class DataSeeder implements CommandLineRunner {
         trainer2.setSpecialization("Data Structures & Algorithms");
         trainer2.setBio("Former tech lead with expertise in algorithm optimization");
         trainerRepository.save(trainer2);
+        createUserIfAbsent(trainer2.getName(), trainer2.getEmail(), "password", Role.TRAINER);
         
         System.out.println("Trainers seeded successfully!");
     }
@@ -108,6 +112,7 @@ public class DataSeeder implements CommandLineRunner {
         admin.setEmail("admin@skillbridge.com");
         admin.setPassword(passwordEncoder.encode("admin123"));
         adminRepository.save(admin);
+        createUserIfAbsent(admin.getName(), admin.getEmail(), "admin123", Role.ADMIN);
         
         System.out.println("Admin seeded successfully!");
     }
@@ -154,7 +159,23 @@ public class DataSeeder implements CommandLineRunner {
         student.setGithubLink("https://github.com/teststudent");
         student.setPortfolioLink("https://teststudent.dev");
         studentRepository.save(student);
+        createUserIfAbsent(student.getName(), student.getEmail(), "password", Role.STUDENT);
         
         System.out.println("Students seeded successfully!");
+    }
+    @SuppressWarnings({"DataFlowIssue", "null"})
+    private void createUserIfAbsent(String name, String email, String rawPassword, Role role) {
+        if (userRepository.existsByEmail(email)) {
+            return;
+        }
+
+        User user = User.builder()
+            .name(name)
+            .email(email)
+            .password(passwordEncoder.encode(rawPassword))
+            .role(role)
+            .build();
+
+        userRepository.save(user);
     }
 }

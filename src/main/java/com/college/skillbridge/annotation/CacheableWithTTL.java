@@ -12,17 +12,3 @@ public @interface CacheableWithTTL {
     long timeToLiveSeconds() default 3600;
     boolean useKeyGenerator() default false;
 }
-
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface SlowApiCache {
-    String cacheName();
-    long timeToLiveSeconds() default 7200;
-}
-
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface UserSpecificCache {
-    String cacheName();
-    boolean includeUserRole() default false;
-}

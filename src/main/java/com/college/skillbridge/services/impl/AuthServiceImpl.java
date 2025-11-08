@@ -3,13 +3,13 @@ package com.college.skillbridge.services.impl;
 import com.college.skillbridge.dtos.AuthRequest;
 import com.college.skillbridge.dtos.AuthResponse;
 import com.college.skillbridge.dtos.RegisterRequest;
+import com.college.skillbridge.enums.Role;
 import com.college.skillbridge.models.User;
 import com.college.skillbridge.repositories.UserRepository;
 import com.college.skillbridge.security.JwtTokenProvider;
 import com.college.skillbridge.services.AuthService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
         validateLoginRequest(request);
         
         // Authenticate
-        Authentication authentication = authenticationManager.authenticate(
+        authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
@@ -51,17 +51,21 @@ public class AuthServiceImpl implements AuthService {
         
         String token = jwtTokenProvider.createToken(
             user.getEmail(),
-            Collections.singletonList(user.getRole().name())
+            Collections.singletonList(user.getRole().getAuthority())
         );
 
-        return AuthResponse.builder()
-            .token(token)
-            .user(user)
-            .build();
+        AuthResponse response = new AuthResponse();
+        response.setToken(token);
+        response.setId(String.valueOf(user.getId()));
+        response.setEmail(user.getEmail());
+        response.setName(user.getName());
+        response.setRole(user.getRole().name());
+        return response;
     }
 
     @Override
     @Transactional
+    @SuppressWarnings({"DataFlowIssue", "null"})
     public AuthResponse register(RegisterRequest request) {
         // Validate input
         validateRegistrationRequest(request);
@@ -71,26 +75,34 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Email already registered");
         }
 
+        Role role = parseRole(request.getRole());
+
         // Create new user
         User user = User.builder()
             .email(request.getEmail())
             .password(passwordEncoder.encode(request.getPassword()))
             .name(request.getName())
-            .role(request.getRole())
+            .role(role)
             .build();
 
-        user = userRepository.save(user);
+        userRepository.save(user);
+
+        User savedUser = userRepository.findByEmail(user.getEmail())
+            .orElseThrow(() -> new RuntimeException("User persistence failed"));
 
         // Generate token
         String token = jwtTokenProvider.createToken(
-            user.getEmail(),
-            Collections.singletonList(user.getRole().name())
+            savedUser.getEmail(),
+            Collections.singletonList(savedUser.getRole().getAuthority())
         );
 
-        return AuthResponse.builder()
-            .token(token)
-            .user(user)
-            .build();
+        AuthResponse response = new AuthResponse();
+        response.setToken(token);
+        response.setId(String.valueOf(savedUser.getId()));
+        response.setEmail(savedUser.getEmail());
+        response.setName(savedUser.getName());
+        response.setRole(savedUser.getRole().name());
+        return response;
     }
 
     private void validateLoginRequest(AuthRequest request) {
@@ -114,6 +126,17 @@ public class AuthServiceImpl implements AuthService {
         }
         if (request.getRole() == null) {
             throw new IllegalArgumentException("Role is required");
+        }
+    }
+
+    private Role parseRole(String rawRole) {
+        if (rawRole == null || rawRole.trim().isEmpty()) {
+            throw new IllegalArgumentException("Role is required");
+        }
+        try {
+            return Role.valueOf(rawRole.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid role: " + rawRole);
         }
     }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaEdit, FaPlus, FaTimes, FaGithub, FaGlobe, FaFileAlt } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaGithub, FaGlobe, FaFileAlt } from 'react-icons/fa';
 import StudentService from '../../services/studentService';
 
 const StudentProfile = () => {
