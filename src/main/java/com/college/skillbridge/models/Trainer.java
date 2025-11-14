@@ -28,10 +28,22 @@ public class Trainer {
     private String password;
     
     private String specialization;
+
+    private String department;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "teacher_id", unique = true)
+    private String teacherId;
     
     @Column(columnDefinition = "TEXT")
     private String bio;
     
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL)
     private List<BatchTrainer> batches;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "college_id")
+    private College college;
 }

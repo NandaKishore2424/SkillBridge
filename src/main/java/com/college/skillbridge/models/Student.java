@@ -31,6 +31,12 @@ public class Student {
     private Integer year;
     
     private String department;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "register_number", unique = true)
+    private String registerNumber;
     
     private Float cgpa;
     
@@ -54,4 +60,8 @@ public class Student {
     
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private List<StudentBatchHistory> batchHistory;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "college_id")
+    private College college;
 }

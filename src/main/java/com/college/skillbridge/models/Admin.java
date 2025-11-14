@@ -26,4 +26,14 @@ public class Admin {
     
     @Column(nullable = false)
     private String password;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "role_title")
+    private String roleTitle;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "college_id")
+    private College college;
 }

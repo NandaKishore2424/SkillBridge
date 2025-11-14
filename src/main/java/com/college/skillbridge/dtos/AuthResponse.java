@@ -7,6 +7,7 @@ public class AuthResponse {
     private String email;
     private String name;
     private String role;
+    private String collegeId;
 
     public AuthResponse() {
     }
@@ -66,5 +67,18 @@ public class AuthResponse {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getCollegeId() {
+        return collegeId;
+    }
+
+    public void setCollegeId(String collegeId) {
+        this.collegeId = collegeId;
+    }
+
+    public void clearTokens() {
+        this.token = null;
+        this.refreshToken = null;
     }
 }

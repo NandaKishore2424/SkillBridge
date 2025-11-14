@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home from '../pages/Home';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import AdminSignup from '../pages/AdminSignup';
 
 // Layouts
 import AdminLayout from '../layouts/AdminLayout';
@@ -47,6 +48,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/admin/signup" element={<AdminSignup />} />
 
         {/* Protected Routes */}
         <Route element={<ProtectedRoute requiredRole="ADMIN" />}>

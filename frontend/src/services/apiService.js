@@ -1,5 +1,4 @@
 import axios from 'axios';
-import AuthService from './authService';
 
 const BASE_URL =
   process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
@@ -9,20 +8,9 @@ const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
-});
-
-// Add auth token to every request
-api.interceptors.request.use(
-  config => {
-    const token = AuthService.getToken();
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
   },
-  error => Promise.reject(error)
-);
+  withCredentials: true
+});
 
 // Handle response errors
 api.interceptors.response.use(
@@ -31,8 +19,9 @@ api.interceptors.response.use(
     // If unauthorized and not on auth pages, redirect to login
     if (error.response?.status === 401 && 
         !window.location.pathname.includes('/login') && 
-        !window.location.pathname.includes('/register')) {
-      AuthService.logout();
+        !window.location.pathname.includes('/register') &&
+        !window.location.pathname.includes('/admin/signup')) {
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

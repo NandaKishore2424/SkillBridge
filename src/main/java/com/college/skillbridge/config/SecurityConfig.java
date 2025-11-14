@@ -3,6 +3,7 @@ package com.college.skillbridge.config;
 import com.college.skillbridge.security.CustomUserDetailsService;
 import com.college.skillbridge.security.JwtTokenFilter;
 import com.college.skillbridge.security.JwtTokenProvider;
+import com.college.skillbridge.security.TokenCookieService;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,12 +31,14 @@ public class SecurityConfig {
     private final List<String> allowedOrigins;
     private final CustomUserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
+    private final TokenCookieService tokenCookieService;
 
     public SecurityConfig(
             JwtTokenProvider jwtTokenProvider,
             @Value("${app.security.cors.allowed-origins:http://localhost:3000}") String allowedOrigins,
             CustomUserDetailsService userDetailsService,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            TokenCookieService tokenCookieService) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
@@ -43,6 +46,7 @@ public class SecurityConfig {
                 .collect(Collectors.toList());
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
+        this.tokenCookieService = tokenCookieService;
     }
 
     @Bean
@@ -53,6 +57,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/colleges/**").permitAll()
                 .requestMatchers("/api/test").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/trainers/**").hasRole("TRAINER")
@@ -60,7 +65,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
-            .addFilterBefore(new JwtTokenFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(new JwtTokenFilter(jwtTokenProvider, tokenCookieService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface StudentRepository extends JpaRepository<Student, UUID> {
     Optional<Student> findByEmail(String email);
+    boolean existsByRegisterNumber(String registerNumber);
+    boolean existsByEmail(String email);
 }

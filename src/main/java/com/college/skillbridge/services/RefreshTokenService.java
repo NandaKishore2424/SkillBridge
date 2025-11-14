@@ -29,9 +29,13 @@ public class RefreshTokenService {
     }
 
     public RefreshToken createRefreshToken(Long userId) {
+        var user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        refreshTokenRepository.deleteByUser(user);
+
         RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUser(userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + userId)));
+        refreshToken.setUser(user);
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
         refreshToken.setToken(UUID.randomUUID().toString());
         
@@ -48,6 +52,7 @@ public class RefreshTokenService {
 
     @Transactional
     public void deleteByUserId(Long userId) {
-        refreshTokenRepository.deleteByUser(userRepository.findById(userId).get());
+        userRepository.findById(userId)
+            .ifPresent(refreshTokenRepository::deleteByUser);
     }
 }

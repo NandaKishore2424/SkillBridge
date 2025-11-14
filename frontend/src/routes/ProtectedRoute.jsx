@@ -5,21 +5,28 @@ import AuthService from '../services/authService';
 const ProtectedRoute = ({ requiredRole }) => {
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  
+
   useEffect(() => {
-    const checkAuth = () => {
-      const isAuthenticated = AuthService.isAuthenticated();
-      const hasRequiredRole = requiredRole 
-        ? AuthService.hasRole(requiredRole) 
+    let isMounted = true;
+
+    const checkAuth = async () => {
+      const session = await AuthService.ensureSession();
+      if (!isMounted) return;
+
+      const hasRequiredRole = requiredRole
+        ? session.user && session.user.role === requiredRole
         : true;
-      
-      setIsAuthorized(isAuthenticated && hasRequiredRole);
+
+      setIsAuthorized(session.authenticated && hasRequiredRole);
       setIsChecking(false);
     };
-    
+
     checkAuth();
+    return () => {
+      isMounted = false;
+    };
   }, [requiredRole]);
-  
+
   if (isChecking) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -27,7 +34,7 @@ const ProtectedRoute = ({ requiredRole }) => {
       </div>
     );
   }
-  
+
   return isAuthorized ? <Outlet /> : <Navigate to="/login" />;
 };
 

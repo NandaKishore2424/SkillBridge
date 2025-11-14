@@ -14,7 +14,7 @@ This document summarizes the architecture, technology stack, backend endpoints a
 - Build: Gradle
 - Database: PostgreSQL (runtime dependency) and H2 for tests (test dependency). Data seeder and JPA entities indicate relational DB usage.
 - Frontend: React (Create React App), Axios, React Router, Tailwind CSS
-- Authentication: JWT-style token usage appears expected (frontend sends Bearer token). Current `SecurityConfig` is permissive for development.
+- Authentication: HTTP-only JWT cookies (access + refresh) managed by Spring Security; frontend relies on cookies + session polling.
 
 ## Repo layout (important top-level folders)
 
@@ -29,20 +29,21 @@ This document summarizes the architecture, technology stack, backend endpoints a
 
 - Client (React SPA)
   - Routes and role-based layouts (Admin, Trainer, Student)
-  - Uses `frontend/src/services/apiService.js` to talk to backend at base URL `http://localhost:8080/api/v1`
-  - `authService.js` manages token storage and login/logout flows
+  - `apiService.js` sends requests with `withCredentials: true` so cookies flow automatically
+  - `authService.js` stores lightweight profile info only, exposes `ensureSession()` which calls `/api/v1/auth/me` if no cached user is available
+  - Dedicated pages for student/trainer signup (`Register.jsx`) and college admin signup (`AdminSignup.jsx`), both backed by the new onboarding APIs
 
 - Backend (Spring Boot)
   - Controller layer: handles HTTP requests, maps to services
-  - Service layer: business logic
+  - Service layer: business logic for auth, onboarding, batches, etc.
   - Repository layer: Spring Data JPA repositories for persistence
-  - Security: `SecurityConfig` provides a `PasswordEncoder` and is configured permissively for development (all endpoints permitted). Production should tighten rules and enable JWT filter.
-  - Data seeding: `DataSeeder` seeds skills, trainers, companies, admin, syllabi, batches, and a test student on startup when DB is empty
+  - Security: `SecurityConfig` runs a JWT filter before `UsernamePasswordAuthenticationFilter`, reads tokens from cookies, and enforces role-based matchers while leaving `/api/v1/auth/**` and `/api/v1/colleges/**` public
+  - Data seeding: `DataSeeder` now seeds a default college plus enriched profile data (phone/register/teacher IDs) when repositories are empty
 
 ## Backend — notable files and responsibilities
 
 - `SkillbridgeApplication.java` — Spring Boot main class
-- `config/SecurityConfig.java` — configures `SecurityFilterChain` and a `BCryptPasswordEncoder`. Currently disables CSRF and permits all requests (development-friendly)
+- `config/SecurityConfig.java` — wires `JwtTokenFilter`, `TokenCookieService`, RBAC matchers, and the shared `BCryptPasswordEncoder`
 - `config/DataSeeder.java` — seeds initial domain data (skills, trainers, companies, admin, syllabi, batches, students) when repositories are empty. Uses repositories for: `StudentRepository`, `SkillRepository`, `BatchRepository`, `SyllabusRepository`, `CompanyRepository`, `TrainerRepository`, `AdminRepository` and a `PasswordEncoder` to store encoded passwords.
 
 ## Backend — controllers and API conventions
@@ -55,19 +56,15 @@ This document summarizes the architecture, technology stack, backend endpoints a
   - `FeedbackController` — feedback endpoints
   - Other controllers for `Student`, `Trainer`, `Admin`, `Syllabus`, `Report` etc.
 
-Note: I did not exhaustively open every controller file in this pass, but you can quickly inspect all endpoints by searching for `@RestController`, `@RequestMapping`, `@GetMapping`, `@PostMapping` in `src/main/java/com/college/skillbridge/controllers`.
+- Public endpoints worth noting:
+  - `POST /api/v1/auth/login|logout|refresh|me`
+  - `POST /api/v1/auth/admin|student|trainer/register`
+  - `GET  /api/v1/colleges` (feeds the signup dropdowns)
+  - Role-guarded APIs remain under `/api/v1/admin/**`, `/api/v1/trainers/**`, `/api/v1/students/**`
 
-Suggested conventions used by the frontend and backend:
-- Base API: `/api/v1` (from `frontend/src/services/apiService.js`)
-- Auth token header: `Authorization: Bearer <token>` (added by axios interceptor in `apiService.js`)
+Front-end no longer injects Authorization headers; all authenticated calls rely on cookies + the `/auth/me` probe.
 
-Common endpoint patterns likely present:
-- `POST /api/v1/auth/login` — authenticate (returns token)
-- `POST /api/v1/auth/register` — create new user
-- `GET /api/v1/batches` — list batches
-- `POST /api/v1/batches` — create batch (admin)
-- `GET /api/v1/companies` — list companies
-- `POST /api/v1/feedback` — submit feedback
+Note: Search for `@RestController` and `@RequestMapping` under `src/main/java/com/college/skillbridge/controllers` to see the full surface area.
 
 Open question / mismatch to note: the top-level `README.md` mentions MongoDB, while the Gradle configuration uses Spring Data JPA and includes `runtimeOnly 'org.postgresql:postgresql'` and tests include `com.h2database:h2`. The code (entities, repositories, `DataSeeder`) uses JPA-style models and repositories. Conclusion: the actual codebase targets a relational database (Postgres/H2). The README's MongoDB note appears stale/outdated and should be corrected.
 
@@ -75,35 +72,45 @@ Open question / mismatch to note: the top-level `README.md` mentions MongoDB, wh
 
 - Primary runtime DB: PostgreSQL (Gradle runtime dependency)
 - Tests: H2 in-memory DB (test dependency)
-- Entities exist under `models/` (examples seen in seeder: `Student`, `Trainer`, `Company`, `Skill`, `Batch`, `Syllabus`, `Admin`)
+- Entities exist under `models/` (examples seen in seeder: `College`, `Student`, `Trainer`, `Company`, `Skill`, `Batch`, `Syllabus`, `Admin`)
 - Relationships: typical training-management relationships (e.g., Batch -> Syllabus, Student -> Batch, Trainer -> Batch, Student has Skills). Review the `models` directory for exact JPA mappings (`@Entity`, `@ManyToOne`, `@OneToMany`, etc.)
 
 Seeded data (from `DataSeeder`):
 - Skills: Java, Python, JavaScript, React, Angular, Spring Boot, Node.js, SQL, MongoDB, AWS, Docker, DSA
-- Trainers: John Smith, Emily Johnson (passwords encoded as `password`)
+- Trainers: John Smith, Emily Johnson (passwords encoded as `password`, now with department/phone/teacher ID metadata)
 - Companies: TechCorp, WebSolutions
-- Admin user: admin@skillbridge.com (password `admin123` encoded)
+- Admin user: admin@skillbridge.com (password `admin123` encoded, tied to seeded college)
 - Syllabi & Batches: DSA Batch 2025 (8 weeks), Full Stack Batch 2025 (12 weeks)
-- Student: Test Student (student@test.com, password `password`)
+- Student: Test Student (student@test.com, password `password`, register number + phone captured)
+- College: SkillBridge University (default multi-tenant scope for seeded accounts)
 
 This seeder helps for local development and testing; remove or conditionally enable it for production environments.
+
+### Manual SQL migrations
+
+- `scripts/sql/20251114_add_college_support.sql` — creates `colleges` table and links legacy rows
+- `scripts/sql/20251114_admin_profile_ext.sql` — adds admin phone/role metadata
+- `scripts/sql/20251114_student_trainer_profile.sql` — backfills student/trainer phone + register/teacher IDs and enforces uniqueness
+
+Apply these scripts (in order) inside Supabase when promoting the new onboarding model.
 
 ## Frontend — structure and important files
 
 - `frontend/src/App.js` — root React component, mounts `AppRoutes`
 - `frontend/src/routes/` — routing and protected route logic (`AppRoutes.js`, `ProtectedRoute.jsx`)
 - `frontend/src/layouts/` — role-based layout components (`AdminLayout.jsx`, `StudentLayout.jsx`, `TrainerLayout.jsx`)
-- `frontend/src/pages/` — pages per role (Admin, Student, Trainer) plus `Login.jsx`, `Register.jsx`
+- `frontend/src/pages/` — pages per role (Admin, Student, Trainer) plus `Login.jsx`, `Register.jsx`, `AdminSignup.jsx`
 - `frontend/src/components/` — shared components such as `Navbar.jsx`, `Sidebar.jsx`
-- `frontend/src/services/apiService.js` — Axios instance, sets base URL to `http://localhost:8080/api/v1`, request interceptor injects token from `authService`, response interceptor handles 401 by redirecting to login
-- `frontend/src/services/authService.js` — (exists) manages token and login state; used by `apiService`
+- `frontend/src/services/apiService.js` — Axios instance with `withCredentials: true`; relies on cookies and redirects to `/login` on 401s outside auth pages
+- `frontend/src/services/authService.js` — handles login/logout + admin/student/trainer signup flows, persists user profile only, exposes `ensureSession()` to hydrate state via `/api/v1/auth/me`
+- `frontend/src/services/collegeService.js` — helper to fetch the college directory for signup forms
 
 Routing & authentication
 - The app uses React Router. `ProtectedRoute.jsx` wraps routes requiring authorization. Routes are split by roles (admin/trainer/student) using layouts found in `layouts/`.
 
 How the frontend calls the API
-- All API calls use `apiService` which wraps axios and returns `{ success: boolean, data/error }` shapes
-- The request interceptor adds `Authorization: Bearer <token>` when `AuthService.getToken()` returns a value
+- All API calls use `apiService` which wraps axios and returns `{ success: boolean, data/error }` shapes; cookies are sent automatically
+- Authentication state is derived from cookies + `/api/v1/auth/me`; `ProtectedRoute.jsx` waits on `AuthService.ensureSession()` before rendering children
 
 ## How to run locally (development)
 

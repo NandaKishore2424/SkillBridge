@@ -12,9 +12,11 @@ import java.io.IOException;
 public class JwtTokenFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenCookieService tokenCookieService;
 
-    public JwtTokenFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtTokenFilter(JwtTokenProvider jwtTokenProvider, TokenCookieService tokenCookieService) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tokenCookieService = tokenCookieService;
     }
 
     @Override
@@ -42,6 +44,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
-        return null;
+        return tokenCookieService.extractAccessToken(request).orElse(null);
     }
 }

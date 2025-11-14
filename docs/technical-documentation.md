@@ -21,10 +21,16 @@ com.college.skillbridge/
 #### 1.2 Key Components
 
 ##### Authentication & Authorization
-- JWT-based authentication
-- Role-based access control (RBAC)
-- Token refresh mechanism
-- Password encryption using BCrypt
+- HTTP-only JWT cookies (short-lived access token + rotating refresh token)
+- `TokenCookieService` issues/clears cookies; `JwtTokenFilter` reads tokens from headers or cookies
+- Refresh tokens persisted in `refresh_token` table (one active per user) with automatic rotation
+- Role-based access control (RBAC) enforced in `SecurityConfig` (`/api/v1/admin/**`, `/api/v1/trainers/**`, `/api/v1/students/**`)
+- Password encryption using BCrypt (`JwtConfig.passwordEncoder`)
+
+##### Multi-Tenant College Onboarding
+- `College` entity captures domain/contact details; every `User`, `Student`, `Trainer`, and `Admin` links to a college
+- Admin signup (`POST /api/v1/auth/admin/register`) creates a college and enforces a single admin per campus
+- Student/Trainer signup requires selecting an existing college and capturing extra profile data (phone, department, register/teacher IDs)
 
 ##### Caching System
 - Caffeine cache implementation
@@ -40,12 +46,18 @@ com.college.skillbridge/
 
 ### 2. API Design
 
-#### 2.1 Authentication APIs
+#### 2.1 Authentication & Onboarding APIs
 ```
-POST /api/auth/login
-POST /api/auth/register
-POST /api/auth/refresh-token
-POST /api/auth/logout
+POST /api/v1/auth/login             # Issues cookies + returns profile
+POST /api/v1/auth/logout            # Clears cookies + refresh token
+POST /api/v1/auth/refresh           # Rotates refresh token, re-issues access cookie
+GET  /api/v1/auth/me                # Returns current user profile (uses cookies)
+
+POST /api/v1/auth/admin/register    # Creates college + admin (one per college)
+POST /api/v1/auth/student/register  # Student signup (requires college + register number)
+POST /api/v1/auth/trainer/register  # Trainer signup (requires college + teacher ID)
+
+GET  /api/v1/colleges               # Public list of colleges for signup forms
 ```
 
 #### 2.2 User Management APIs
@@ -86,14 +98,31 @@ POST   /api/assessments/{id}/submit
 ```sql
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN','TRAINER','STUDENT')),
+    college_id UUID REFERENCES colleges(id)
 );
 ```
+
+##### College
+```sql
+CREATE TABLE colleges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) UNIQUE NOT NULL,
+    domain VARCHAR(255) UNIQUE NOT NULL,
+    website_url TEXT,
+    contact_email VARCHAR(255),
+    contact_phone VARCHAR(50),
+    address TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+##### Student / Trainer profile highlights
+- `students`: `phone_number`, unique `register_number`, `year`, `college_id`
+- `trainers`: `department`, `phone_number`, unique `teacher_id`, `college_id`
 
 ##### Batch
 ```sql
@@ -126,17 +155,22 @@ CREATE TABLE assessments (
 
 ### 4. Security Implementation
 
-#### 4.1 JWT Configuration
+#### 4.1 JWT & Cookie Configuration
 ```java
 @Configuration
 public class JwtConfig {
-    @Value("${JWT_SECRET}")
+    @Value("${jwt.secret}")
     private String secret;
-    
-    @Value("${JWT_EXPIRATION}")
-    private long expiration;
-    
-    // JWT token generation and validation configuration
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+
+@Component
+public class TokenCookieService {
+    // Builds SameSite/HttpOnly cookies for access + refresh tokens
 }
 ```
 
@@ -145,10 +179,21 @@ public class JwtConfig {
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    // Security filter chain configuration
-    // CORS configuration
-    // CSRF protection
-    // Authentication provider setup
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/v1/auth/**", "/api/v1/colleges/**").permitAll()
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/trainers/**").hasRole("TRAINER")
+                .requestMatchers("/api/v1/students/**").hasRole("STUDENT")
+                .anyRequest().authenticated())
+            .addFilterBefore(new JwtTokenFilter(jwtTokenProvider, tokenCookieService),
+                UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
 }
 ```
 
