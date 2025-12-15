@@ -60,6 +60,11 @@ POST /api/v1/auth/trainer/register  # Trainer signup (requires college + teacher
 GET  /api/v1/colleges               # Public list of colleges for signup forms
 ```
 
+Payload requirements:
+- **Admin registration**: `adminName`, `adminEmail`, `password`, `phoneNumber`, `roleTitle`, plus college metadata (`collegeName`, `collegeDomain`, optional `collegeWebsite`, `collegeContactEmail`, `collegeContactPhone`, `collegeAddress`).
+- **Student registration**: `name`, `email`, `password`, `phoneNumber`, `department`, `registerNumber`, `year`, `collegeId`.
+- **Trainer registration**: `name`, `email`, `password`, `phoneNumber`, `department`, `teacherId`, `specialization`, optional `bio`, `collegeId`.
+
 #### 2.2 User Management APIs
 ```
 GET    /api/users

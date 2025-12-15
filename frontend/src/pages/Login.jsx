@@ -175,7 +175,7 @@ const Login = () => {
             </p>
             <p className="text-sm text-gray-600">
               College admin?{' '}
-              <Link to="/admin/signup" className="font-medium text-primary-600 hover:text-primary-500 transition">
+              <Link to="/college/signup" className="font-medium text-primary-600 hover:text-primary-500 transition">
                 Register your college
               </Link>
             </p>

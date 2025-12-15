@@ -108,15 +108,20 @@ const AuthService = {
   },
 
   ensureSession: async () => {
+    console.log('🔐 ensureSession called');
     const cachedUser = AuthService.getCurrentUser();
     if (cachedUser) {
+      console.log('🔐 Cached user found:', cachedUser);
       return { authenticated: true, user: cachedUser };
     }
 
+    console.log('🔐 No cached user, fetching profile from backend');
     try {
       const profile = await AuthService.fetchProfile();
+      console.log('🔐 Profile fetched:', profile);
       return { authenticated: true, user: profile };
     } catch (error) {
+      console.log('🔐 Profile fetch failed:', error.message);
       saveUserProfile(null);
       return { authenticated: false, user: null };
     }

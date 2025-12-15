@@ -20,7 +20,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && 
         !window.location.pathname.includes('/login') && 
         !window.location.pathname.includes('/register') &&
-        !window.location.pathname.includes('/admin/signup')) {
+        !window.location.pathname.includes('/college/signup')) {
       localStorage.removeItem('user');
       window.location.href = '/login';
     }

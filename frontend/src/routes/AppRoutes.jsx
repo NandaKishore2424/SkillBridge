@@ -41,6 +41,8 @@ import StudentFeedback from '../pages/trainer/StudentFeedback';
 import ProtectedRoute from './ProtectedRoute';
 
 const AppRoutes = () => {
+  console.log('🚀 AppRoutes rendering');
+  
   return (
     <Router>
       <Routes>
@@ -48,11 +50,11 @@ const AppRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/admin/signup" element={<AdminSignup />} />
+        <Route path="/college/signup" element={<AdminSignup />} />
 
         {/* Protected Routes */}
-        <Route element={<ProtectedRoute requiredRole="ADMIN" />}>
-          <Route path="/admin" element={<AdminLayout />}>
+        <Route path="/admin/*" element={<ProtectedRoute requiredRole="ADMIN" />}>
+          <Route element={<AdminLayout />}>
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="students" element={<AdminStudents />} />
             <Route path="batches" element={<AdminBatches />} />
@@ -65,8 +67,8 @@ const AppRoutes = () => {
         </Route>
 
         {/* Student Routes */}
-        <Route element={<ProtectedRoute requiredRole="STUDENT" />}>
-          <Route path="/student" element={<StudentLayout />}>
+        <Route path="/student/*" element={<ProtectedRoute requiredRole="STUDENT" />}>
+          <Route element={<StudentLayout />}>
             <Route path="dashboard" element={<StudentDashboard />} />
             <Route path="profile" element={<StudentProfile />} />
             <Route path="batch" element={<StudentBatch />} />
@@ -78,8 +80,8 @@ const AppRoutes = () => {
         </Route>
 
         {/* Trainer Routes */}
-        <Route element={<ProtectedRoute requiredRole="TRAINER" />}>
-          <Route path="/trainer" element={<TrainerLayout />}>
+        <Route path="/trainer/*" element={<ProtectedRoute requiredRole="TRAINER" />}>
+          <Route element={<TrainerLayout />}>
             <Route path="dashboard" element={<TrainerDashboard />} />
             <Route path="batches" element={<TrainerBatches />} />
             <Route path="batches/:batchId" element={<TrainerBatchDetails />} />

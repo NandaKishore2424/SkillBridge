@@ -15,6 +15,9 @@ const Home = () => {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
+              <Link to="/college/signup" className="px-3 py-2 rounded-md text-sm font-medium text-primary-600 border border-primary-200 hover:bg-primary-50 transition">
+                Register College
+              </Link>
               <Link to="/login" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-primary-600 transition">
                 Login
               </Link>
@@ -45,16 +48,22 @@ const Home = () => {
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link
-                to="/register"
+                to="/college/signup"
                 className="px-6 py-3 rounded-md text-base font-semibold text-primary-900 bg-white shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
               >
-                Launch Your Cohort
+                Register a College
               </Link>
               <Link
                 to="/login"
                 className="px-6 py-3 rounded-md text-base font-semibold text-white border border-white/40 hover:bg-white/10 transition"
               >
                 Explore the Platform
+              </Link>
+              <Link
+                to="/register"
+                className="px-6 py-3 rounded-md text-base font-semibold text-white border border-white/40 hover:bg-white/20 transition"
+              >
+                Student / Trainer Signup
               </Link>
             </div>
             <div className="mt-12 grid grid-cols-2 gap-6 text-white/70 text-sm">

@@ -100,6 +100,8 @@ Apply these scripts (in order) inside Supabase when promoting the new onboarding
 - `frontend/src/routes/` — routing and protected route logic (`AppRoutes.js`, `ProtectedRoute.jsx`)
 - `frontend/src/layouts/` — role-based layout components (`AdminLayout.jsx`, `StudentLayout.jsx`, `TrainerLayout.jsx`)
 - `frontend/src/pages/` — pages per role (Admin, Student, Trainer) plus `Login.jsx`, `Register.jsx`, `AdminSignup.jsx`
+  - `Register.jsx` drives the student/trainer onboarding form and now includes a prominent “Register a College Instead” CTA that routes to `/college/signup`
+  - `AdminSignup.jsx` captures admin contact info (name, email, phone, role title, password) and college metadata (name, domain, website, contact email/phone, address)
 - `frontend/src/components/` — shared components such as `Navbar.jsx`, `Sidebar.jsx`
 - `frontend/src/services/apiService.js` — Axios instance with `withCredentials: true`; relies on cookies and redirects to `/login` on 401s outside auth pages
 - `frontend/src/services/authService.js` — handles login/logout + admin/student/trainer signup flows, persists user profile only, exposes `ensureSession()` to hydrate state via `/api/v1/auth/me`

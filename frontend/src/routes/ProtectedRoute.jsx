@@ -10,13 +10,16 @@ const ProtectedRoute = ({ requiredRole }) => {
     let isMounted = true;
 
     const checkAuth = async () => {
+      console.log('🔒 ProtectedRoute checking auth for role:', requiredRole);
       const session = await AuthService.ensureSession();
+      console.log('🔒 Session result:', session);
       if (!isMounted) return;
 
       const hasRequiredRole = requiredRole
         ? session.user && session.user.role === requiredRole
         : true;
 
+      console.log('🔒 Has required role:', hasRequiredRole, 'Authenticated:', session.authenticated);
       setIsAuthorized(session.authenticated && hasRequiredRole);
       setIsChecking(false);
     };
@@ -35,7 +38,13 @@ const ProtectedRoute = ({ requiredRole }) => {
     );
   }
 
-  return isAuthorized ? <Outlet /> : <Navigate to="/login" />;
+  if (!isAuthorized) {
+    console.log('🔒 Not authorized, redirecting to /login');
+    return <Navigate to="/login" />;
+  }
+  
+  console.log('🔒 Authorized, rendering protected content');
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

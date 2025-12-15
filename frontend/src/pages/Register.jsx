@@ -224,6 +224,19 @@ const Register = () => {
               </div>
             </div>
 
+            <div className="border border-dashed border-primary-200 rounded-lg p-4 bg-primary-50/50">
+              <p className="text-sm text-gray-700 mb-3">
+                Representing a college or training cell?
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/college/signup')}
+                className="w-full border border-primary-500 text-primary-700 font-medium py-2 rounded-md hover:bg-primary-500 hover:text-white transition"
+              >
+                Register a College Instead
+              </button>
+            </div>
+
             {selectedRole === 'STUDENT' ? (
               <div className="space-y-4">
                 <input
@@ -320,7 +333,7 @@ const Register = () => {
           </p>
           <p className="text-sm text-gray-600">
             Are you a college admin?{' '}
-            <Link to="/admin/signup" className="font-medium text-primary-600 hover:text-primary-500">
+            <Link to="/college/signup" className="font-medium text-primary-600 hover:text-primary-500">
               Register your college
             </Link>
           </p>

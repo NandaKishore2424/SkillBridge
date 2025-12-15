@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthService from '../services/authService';
 
 const AdminSignup = () => {
+  console.log('🔵 AdminSignup component mounted');
+  
   const [adminData, setAdminData] = useState({
     adminName: '',
     adminEmail: '',
@@ -11,6 +13,13 @@ const AdminSignup = () => {
     password: '',
     confirmPassword: ''
   });
+
+  useEffect(() => {
+    console.log('🟢 AdminSignup useEffect ran - component is rendering');
+    return () => {
+      console.log('🔴 AdminSignup component unmounting');
+    };
+  }, []);
 
   const [collegeData, setCollegeData] = useState({
     collegeName: '',
